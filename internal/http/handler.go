@@ -7,7 +7,6 @@ import (
 	"github.com/404LifeFound/es-snapshot-restore/config"
 	"github.com/404LifeFound/es-snapshot-restore/internal/elastic"
 	"github.com/404LifeFound/es-snapshot-restore/internal/k8s"
-	elasticsearchv1 "github.com/elastic/cloud-on-k8s/v3/pkg/apis/elasticsearch/v1"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
@@ -102,12 +101,7 @@ func (r *RestoreSnapshotHandler) RestoreSnapshot(c *gin.Context) {
 }
 
 func (h *Handler) DebugHandler(c *gin.Context) {
-	obj := &elasticsearchv1.Elasticsearch{}
-
-	err := h.K8Sclient.Get(c.Request.Context(),
-		runtimeclient.ObjectKey{Namespace: config.GlobalConfig.ES.Namespace, Name: config.GlobalConfig.ES.Name},
-		obj,
-	)
+	err := h.DeleteRestoreESNode(c.Request.Context(), "restore-xxxx")
 	if err != nil {
 		c.Error(err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
@@ -116,7 +110,7 @@ func (h *Handler) DebugHandler(c *gin.Context) {
 
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"obj": obj,
+		"message": "success",
 	})
 }
 func RegisterHandler(e *gin.Engine, es_client *elastic.ES, db_client *gorm.DB, k8s_client *k8s.Client) error {

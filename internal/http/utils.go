@@ -1,11 +1,17 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/404LifeFound/es-snapshot-restore/config"
 	"github.com/404LifeFound/es-snapshot-restore/internal/db"
+	"github.com/404LifeFound/es-snapshot-restore/internal/k8s"
+	elasticsearchv1 "github.com/elastic/cloud-on-k8s/v3/pkg/apis/elasticsearch/v1"
 	"github.com/rs/zerolog/log"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (h *Handler) QueryIndexResultViaTime(name []string, startAt, endAt string) ([]db.ESIndex, error) {
@@ -162,4 +168,81 @@ func (h *Handler) QueryLatestSnapshotsViaIndex(index []db.ESIndex) (map[string]d
 func (h *Handler) GetIndexGBSize(index []db.ESIndex) float64 {
 	indices := db.ESIndexs(index)
 	return indices.StoreSize()
+}
+
+func (h *Handler) GetElasticsearch(ctx context.Context) (*elasticsearchv1.Elasticsearch, error) {
+	es := &elasticsearchv1.Elasticsearch{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Elasticsearch",
+			APIVersion: "elasticsearch.k8s.elastic.co/v1",
+		},
+	}
+
+	err := h.K8Sclient.Get(ctx,
+		runtimeclient.ObjectKey{Namespace: config.GlobalConfig.ES.Namespace, Name: config.GlobalConfig.ES.Name},
+		es,
+	)
+
+	if err != nil {
+		log.Error().Err(err).Msgf("faild to get Elasticsearch %s from %s namespace", config.GlobalConfig.ES.Name, config.GlobalConfig.ES.Namespace)
+		return nil, err
+	}
+
+	return es, nil
+}
+
+func (h *Handler) MergeElasticsearch(ctx context.Context, name, size string) (*elasticsearchv1.Elasticsearch, error) {
+	node_set := k8s.NewESNodeSet(name, size)
+	es, err := h.GetElasticsearch(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	es.Spec.NodeSets = append(es.Spec.NodeSets, *node_set.NodeSet)
+	return es, nil
+}
+
+func (h *Handler) NewRestoreESNode(ctx context.Context, name, size string) error {
+	node_set := k8s.NewESNodeSet(name, size)
+	es, err := h.GetElasticsearch(ctx)
+	if err != nil {
+		return err
+	}
+
+	patch := runtimeclient.MergeFrom(es.DeepCopy())
+	es.Spec.NodeSets = append(es.Spec.NodeSets, *node_set.NodeSet)
+
+	err = h.K8Sclient.Patch(ctx, es, patch)
+	if err != nil {
+		log.Error().Err(err).Msgf("failed to patch Elasticsearch of %s in %s nanespace", config.GlobalConfig.ES.Name, config.GlobalConfig.ES.Namespace)
+		return err
+	}
+
+	log.Info().Msgf("success to patch Elasticsearch of %s in %s nanespace", config.GlobalConfig.ES.Name, config.GlobalConfig.ES.Namespace)
+	return nil
+}
+
+func (h *Handler) DeleteRestoreESNode(ctx context.Context, name string) error {
+	es, err := h.GetElasticsearch(ctx)
+	if err != nil {
+		return err
+	}
+
+	patch := runtimeclient.MergeFrom(es.DeepCopy())
+	var node_sets []elasticsearchv1.NodeSet
+	for _, node := range es.Spec.NodeSets {
+		if node.Name != name {
+			node_sets = append(node_sets, node)
+		}
+	}
+	es.Spec.NodeSets = node_sets
+
+	err = h.K8Sclient.Patch(ctx, es, patch)
+	if err != nil {
+		log.Error().Err(err).Msgf("failed to patch Elasticsearch of %s in %s nanespace", config.GlobalConfig.ES.Name, config.GlobalConfig.ES.Namespace)
+		return err
+	}
+
+	log.Info().Msgf("success to patch Elasticsearch of %s in %s nanespace", config.GlobalConfig.ES.Name, config.GlobalConfig.ES.Namespace)
+	return nil
 }

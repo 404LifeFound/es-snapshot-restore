@@ -1,5 +1,7 @@
 package config
 
+import v1 "k8s.io/api/core/v1"
+
 var GlobalConfig Config
 
 /*
@@ -40,15 +42,28 @@ type Http struct {
 }
 
 type ES struct {
-	Host         string `koanf:"host" json:"host" yaml:"host"`
-	Port         int    `koanf:"port" json:"port" yaml:"port"`
-	Protocol     string `koanf:"protocol" json:"protocol" yaml:"protocol"`
-	Username     string `koanf:"username" yaml:"username" json:"username"`
-	Password     string `koanf:"password" yaml:"password" json:"password"`
-	RestoreKey   string `koanf:"restorekey" yaml:"restore_key" json:"restore_key"`
-	RestoreValue string `koanf:"restorevalue" yaml:"restore_value" json:"restore_value"`
-	Name         string `koanf:"name" yaml:"name" json:"name"`
-	Namespace    string `koanf:"namespace" yaml:"namespace" json:"namespace"`
+	Host           string            `koanf:"host" json:"host" yaml:"host"`
+	Port           int               `koanf:"port" json:"port" yaml:"port"`
+	Protocol       string            `koanf:"protocol" json:"protocol" yaml:"protocol"`
+	Username       string            `koanf:"username" yaml:"username" json:"username"`
+	Password       string            `koanf:"password" yaml:"password" json:"password"`
+	RestoreKey     string            `koanf:"restorekey" yaml:"restore_key" json:"restore_key"`
+	RestoreCount   int32             `koanf:"restorecount" yaml:"restore_count" json:"restore_count"`
+	Name           string            `koanf:"name" yaml:"name" json:"name"`
+	Namespace      string            `koanf:"namespace" yaml:"namespace" json:"namespace"`
+	ServiceAccount string            `koanf:"serviceaccount" yaml:"service_account" json:"service_account"`
+	Plugins        []string          `koanf:"plugins" yaml:"plugins" json:"plugins"`
+	LimitCPU       string            `koanf:"limitcpu" yaml:"limit_cpu" json:"limit_cpu"`
+	LimitMem       string            `koanf:"limitmem" yaml:"limit_mem" json:"limit_mem"`
+	RequestCPU     string            `koanf:"requestcpu" yaml:"request_cpu" json:"request_cpu"`
+	RequestMem     string            `koanf:"requestmem" yaml:"request_mem" json:"request_mem"`
+	StorageClass   string            `koanf:"storageclass" yaml:"storage_class" json:"storage_class"`
+	Labels         map[string]string `koanf:"labels" yaml:"labels" json:"labels"`
+	Annotations    map[string]string `koanf:"annotations" yaml:"annotations" json:"annotations"`
+	NodeAffinity   v1.NodeAffinity   `koanf:"nodeaffinity" yaml:"nodeAffinity" json:"nodeAffinity"`
+	Tolerations    map[string]string `koanf:"tolerations" yaml:"tolerations" json:"tolerations"`
+	ContainerName  string            `koanf:"containername" yaml:"container_name" json:"container_name"`
+	TopologyKey    string            `koanf:"topologykey" yaml:"topology_key" json:"topology_key"`
 }
 
 type Kibana struct {

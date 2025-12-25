@@ -68,7 +68,19 @@ func NewServerCmd() *cobra.Command {
 
 	//flags for es
 	flags.String("es-restorekey", "restore", "restore attr key")
-	flags.String("es-restorevalue", "", "restore attr value")
+	flags.Int32("es-restorecount", 2, "restore nodeset count")
+	flags.String("es-serviceaccount", "elastic-search", "Elasticsearch serviceaccount name")
+	flags.StringSlice("es-plugins", []string{"mapper-size", "repository-gcs"}, "Elasticsearch plugins")
+	flags.String("es-requestcpu", "4", "request cpu resource")
+	flags.String("es-requestmem", "8", "request mem resource")
+	flags.String("es-limitcpu", "4", "limit mem resource")
+	flags.String("es-limitmem", "8", "limit mem resource")
+	flags.String("es-storageclass", "standard-rwo", "storage class name")
+	flags.String("es-containername", "elasticsearch", "elasticsearch container name")
+	flags.String("es-topologykey", "kubernetes.io/hostname", "elasticsearch topology key")
+	flags.StringToString("es-labels", map[string]string{}, "es labels")
+	flags.StringToString("es-annotations", map[string]string{}, "es annotations")
+	flags.StringToString("es-tolerations", map[string]string{}, "es tolerations")
 
 	//flags for kubernetes
 	flags.String("kube-config", "~/.kube/config", "kubeconfig file path")
