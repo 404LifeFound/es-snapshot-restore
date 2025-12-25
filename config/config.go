@@ -22,6 +22,7 @@ type Config struct {
 	DB         DB     `koanf:"db" json:"db" yaml:"db"`
 	Redis      Redis  `koanf:"redis" json:"redis" yaml:"redis"`
 	Cron       Cron   `koanf:"cron" json:"cron" yaml:"cron"`
+	Kube       Kube   `koanf:"kube" json:"kube" yaml:"kube"`
 }
 
 type Conf struct {
@@ -39,11 +40,15 @@ type Http struct {
 }
 
 type ES struct {
-	Host     string `koanf:"host" json:"host" yaml:"host"`
-	Port     int    `koanf:"port" json:"port" yaml:"port"`
-	Protocol string `koanf:"protocol" json:"protocol" yaml:"protocol"`
-	Username string `koanf:"username" yaml:"username" json:"username"`
-	Password string `koanf:"password" yaml:"password" json:"password"`
+	Host         string `koanf:"host" json:"host" yaml:"host"`
+	Port         int    `koanf:"port" json:"port" yaml:"port"`
+	Protocol     string `koanf:"protocol" json:"protocol" yaml:"protocol"`
+	Username     string `koanf:"username" yaml:"username" json:"username"`
+	Password     string `koanf:"password" yaml:"password" json:"password"`
+	RestoreKey   string `koanf:"restorekey" yaml:"restore_key" json:"restore_key"`
+	RestoreValue string `koanf:"restorevalue" yaml:"restore_value" json:"restore_value"`
+	Name         string `koanf:"name" yaml:"name" json:"name"`
+	Namespace    string `koanf:"namespace" yaml:"namespace" json:"namespace"`
 }
 
 type Kibana struct {
@@ -68,4 +73,8 @@ type Redis struct {
 
 type Cron struct {
 	Schedule string `koanf:"schedule" yaml:"schedule" json:"schedule"`
+}
+
+type Kube struct {
+	Config string `koanf:"config" yaml:"config" json:"config"`
 }

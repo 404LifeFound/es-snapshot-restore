@@ -42,6 +42,8 @@ func NewRootCmd() *cobra.Command {
 	rootCmd.PersistentFlags().String("es-protocol", "https", "es protocol,https or http")
 	rootCmd.PersistentFlags().String("es-username", "", "es username")
 	rootCmd.PersistentFlags().String("es-password", "", "es password")
+	rootCmd.PersistentFlags().String("es-name", "elasticsearch", "elaticsearch name")
+	rootCmd.PersistentFlags().String("es-namespace", "elasticsearch", "elasticsearch namespace")
 
 	rootCmd.AddCommand(
 		NewServerCmd(),

@@ -4,15 +4,20 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/404LifeFound/es-snapshot-restore/config"
 	"github.com/404LifeFound/es-snapshot-restore/internal/elastic"
+	"github.com/404LifeFound/es-snapshot-restore/internal/k8s"
+	elasticsearchv1 "github.com/elastic/cloud-on-k8s/v3/pkg/apis/elasticsearch/v1"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Handler struct {
-	ESClient *elastic.ES
-	DBClient *gorm.DB
+	ESClient  *elastic.ES
+	DBClient  *gorm.DB
+	K8Sclient runtimeclient.Client
 }
 
 type RestoreSnapshotHandler struct {
@@ -96,15 +101,35 @@ func (r *RestoreSnapshotHandler) RestoreSnapshot(c *gin.Context) {
 	})
 }
 
-func RegisterHandler(e *gin.Engine, es_client *elastic.ES, db_client *gorm.DB) error {
+func (h *Handler) DebugHandler(c *gin.Context) {
+	obj := &elasticsearchv1.Elasticsearch{}
+
+	err := h.K8Sclient.Get(c.Request.Context(),
+		runtimeclient.ObjectKey{Namespace: config.GlobalConfig.ES.Namespace, Name: config.GlobalConfig.ES.Name},
+		obj,
+	)
+	if err != nil {
+		c.Error(err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"message": fmt.Sprintf("can't get elasticsearch %s from namespace %s: %s", config.GlobalConfig.ES.Name, config.GlobalConfig.ES.Namespace, err.Error()),
+		})
+
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"obj": obj,
+	})
+}
+func RegisterHandler(e *gin.Engine, es_client *elastic.ES, db_client *gorm.DB, k8s_client *k8s.Client) error {
 	handler := &Handler{
-		ESClient: es_client,
-		DBClient: db_client,
+		ESClient:  es_client,
+		DBClient:  db_client,
+		K8Sclient: k8s_client,
 	}
 
 	restore_snaphost_handler := &RestoreSnapshotHandler{Handler: handler}
 
 	e.GET("/indices", handler.QueryIndex)
 	e.POST("/restore", restore_snaphost_handler.RestoreSnapshot)
+	e.GET("/debug", handler.DebugHandler)
 	return nil
 }

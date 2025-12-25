@@ -6,6 +6,7 @@ import (
 	"github.com/404LifeFound/es-snapshot-restore/internal/db"
 	"github.com/404LifeFound/es-snapshot-restore/internal/elastic"
 	"github.com/404LifeFound/es-snapshot-restore/internal/http"
+	"github.com/404LifeFound/es-snapshot-restore/internal/k8s"
 	"github.com/ipfans/fxlogger"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -26,6 +27,7 @@ func NewServerCmd() *cobra.Command {
 					elastic.NewDefaultESConfig,
 					elastic.NewES,
 					cron.NewCron,
+					k8s.NewClient,
 				),
 				fx.Invoke(
 					http.RegisterHandler,
@@ -61,8 +63,15 @@ func NewServerCmd() *cobra.Command {
 	flags.String("redis-password", "", "redis password")
 	flags.Int("redis-db", 0, "redis db")
 
-	// flags from cronjob
+	// flags for cronjob
 	flags.String("cron-schedule", "0 */10 * * * *", "cron job schedule")
+
+	//flags for es
+	flags.String("es-restorekey", "restore", "restore attr key")
+	flags.String("es-restorevalue", "", "restore attr value")
+
+	//flags for kubernetes
+	flags.String("kube-config", "~/.kube/config", "kubeconfig file path")
 
 	return serverCmd
 }
