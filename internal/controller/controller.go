@@ -224,7 +224,7 @@ func NewRestoreReconcilerCtrl(lc fx.Lifecycle, mgr *ctrl.Manager) *RestoreReconc
 			return nil
 		},
 		OnStop: func(context.Context) error {
-			log.Info().Msg("restart worker start")
+			log.Info().Msg("restart worker stop")
 			return nil
 		},
 	})
