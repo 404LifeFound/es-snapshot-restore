@@ -231,7 +231,7 @@ func NewRestoreReconcilerCtrl(lc fx.Lifecycle, mgr *ctrl.Manager) *RestoreReconc
 	return r
 }
 
-func RunManager(lc fx.Lifecycle, mgr *ctrl.Manager) {
+func RunManager(lc fx.Lifecycle, mgr *ctrl.Manager, _ *RestoreReconciler) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			log.Info().Msg("controller start")
