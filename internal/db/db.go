@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/404LifeFound/es-snapshot-restore/config"
 	"github.com/rs/zerolog/log"
@@ -28,6 +29,30 @@ type ESSnapshot struct {
 	State      string
 	StartTime  TimeString
 	Indices    datatypes.JSON
+}
+
+type Task struct {
+	gorm.Model
+	TaskID       string  `gorm:"size:64;uniqueIndex;not null"`
+	Status       string  `gorm:"size:20;index;not null"` // PENDING, RUNNING, SUCCESS, FAILED, TIMEOUT, CANCELED
+	CurrentStage string  `gorm:"size:32"`
+	Payload      *string `gorm:"type:json"`
+	ErrorMessage *string `gorm:"type:text"`
+
+	StartedAt  *time.Time
+	FinishedAt *time.Time
+}
+
+type TaskStage struct {
+	gorm.Model
+	TaskID     string `gorm:"size:64;index;not null"`
+	Stage      string `gorm:"size:32;not null"` // INIT,CREATE_ES_NODE,CHECK_ES_NODE,RESTORE_INDEX
+	Status     string `gorm:"size:20;not null"` // PENDING, RUNNING, SUCCESS, FAILED, SKIPPED
+	RetryCount int    `gorm:"default:0"`
+	ErrorMsg   string `gorm:"type:text"`
+
+	StartedAt  *time.Time
+	FinishedAt *time.Time
 }
 
 func NewDB(lc fx.Lifecycle) (*gorm.DB, error) {
@@ -59,7 +84,7 @@ func NewDB(lc fx.Lifecycle) (*gorm.DB, error) {
 	lc.Append(fx.Hook{
 		OnStart: func(context.Context) error {
 			log.Info().Msg("db start")
-			if err := db.AutoMigrate(&ESIndex{}, &ESSnapshot{}); err != nil {
+			if err := db.AutoMigrate(&ESIndex{}, &ESSnapshot{}, &Task{}, &TaskStage{}); err != nil {
 				log.Error().Err(err).Msg("failed to migrate db")
 				return err
 			}
@@ -81,6 +106,11 @@ func NewDB(lc fx.Lifecycle) (*gorm.DB, error) {
 	})
 
 	return db, nil
+}
+
+// Create records in batch but with no conflict
+func CreateRecords[T any](db *gorm.DB, records *[]T) error {
+	return db.Create(records).Error
 }
 
 // Create records in batch, if onconflict on name(uniq index) column, then update the store_size and updated_at column

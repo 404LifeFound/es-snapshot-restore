@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/404LifeFound/es-snapshot-restore/internal/cache"
+	"github.com/404LifeFound/es-snapshot-restore/internal/controller"
 	"github.com/404LifeFound/es-snapshot-restore/internal/cron"
 	"github.com/404LifeFound/es-snapshot-restore/internal/db"
 	"github.com/404LifeFound/es-snapshot-restore/internal/elastic"
@@ -28,10 +29,13 @@ func NewServerCmd() *cobra.Command {
 					elastic.NewES,
 					cron.NewCron,
 					k8s.NewClient,
+					controller.NewManager,
+					controller.NewRestoreReconcilerCtrl,
 				),
 				fx.Invoke(
 					http.RegisterHandler,
 					cron.RegisterJobs,
+					controller.RunManager,
 				),
 				fx.WithLogger(fxlogger.WithZerolog(log.Logger)),
 			)
@@ -78,6 +82,8 @@ func NewServerCmd() *cobra.Command {
 	flags.String("es-storageclass", "standard-rwo", "storage class name")
 	flags.String("es-containername", "elasticsearch", "elasticsearch container name")
 	flags.String("es-topologykey", "kubernetes.io/hostname", "elasticsearch topology key")
+	flags.Float64("es-diskminsize", 10.0, "restore node min disk size")
+	flags.Int("es-randomlen", 10.0, "restore node ramdom name part lenght")
 	flags.StringToString("es-labels", map[string]string{}, "es labels")
 	flags.StringToString("es-annotations", map[string]string{}, "es annotations")
 	flags.StringToString("es-tolerations", map[string]string{}, "es tolerations")

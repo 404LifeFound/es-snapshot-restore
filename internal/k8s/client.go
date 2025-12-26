@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/404LifeFound/es-snapshot-restore/config"
+	"github.com/404LifeFound/es-snapshot-restore/internal/utils"
 	commonv1 "github.com/elastic/cloud-on-k8s/v3/pkg/apis/common/v1"
 	esv1 "github.com/elastic/cloud-on-k8s/v3/pkg/apis/elasticsearch/v1"
 	eslabel "github.com/elastic/cloud-on-k8s/v3/pkg/controller/elasticsearch/label"
@@ -144,7 +145,7 @@ func NewESNodeSet(name, size string) *ESNodeSet {
 								v1.ResourceStorage: resource.MustParse(size),
 							},
 						},
-						StorageClassName: ptrToString(config.GlobalConfig.ES.StorageClass),
+						StorageClassName: utils.PtrToAny(config.GlobalConfig.ES.StorageClass),
 					},
 				},
 			},

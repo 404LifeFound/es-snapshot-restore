@@ -64,6 +64,8 @@ type ES struct {
 	Tolerations    map[string]string `koanf:"tolerations" yaml:"tolerations" json:"tolerations"`
 	ContainerName  string            `koanf:"containername" yaml:"container_name" json:"container_name"`
 	TopologyKey    string            `koanf:"topologykey" yaml:"topology_key" json:"topology_key"`
+	DiskMinSize    float64           `koanf:"diskminsize" yaml:"disk_min_size" json:"disk_min_size"`
+	RandomLen      int               `koanf:"randomlen" yaml:"random_len" json:"random_len"`
 }
 
 type Kibana struct {

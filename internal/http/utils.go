@@ -170,6 +170,11 @@ func (h *Handler) GetIndexGBSize(index []db.ESIndex) float64 {
 	return indices.StoreSize()
 }
 
+func (h *Handler) GetIndexNames(index []db.ESIndex) []string {
+	indices := db.ESIndexs(index)
+	return indices.IndexNames()
+}
+
 func (h *Handler) GetElasticsearch(ctx context.Context) (*elasticsearchv1.Elasticsearch, error) {
 	es := &elasticsearchv1.Elasticsearch{
 		TypeMeta: metav1.TypeMeta{

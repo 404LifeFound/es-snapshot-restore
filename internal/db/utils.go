@@ -64,3 +64,12 @@ func (e *ESIndexs) StoreSize() float64 {
 
 	return totalGB
 }
+
+func (e *ESIndexs) IndexNames() []string {
+	var n []string
+	for _, i := range *e {
+		n = append(n, i.Name)
+	}
+
+	return n
+}
