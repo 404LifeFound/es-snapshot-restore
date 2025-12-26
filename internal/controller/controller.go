@@ -212,11 +212,22 @@ func NewManager() (*ctrl.Manager, error) {
 	return &mgr, nil
 }
 
-func NewRestoreReconcilerCtrl(mgr *ctrl.Manager) *RestoreReconciler {
+func NewRestoreReconcilerCtrl(lc fx.Lifecycle, mgr *ctrl.Manager) *RestoreReconciler {
 	r := NewRestoreReconciler((*mgr).GetClient())
-	log.Info().Msg("restore worker start")
 	r.StartWorker(context.Background())
 	r.SetupWithManager(*mgr)
+
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			log.Info().Msg("restart worker start")
+			r.StartWorker(ctx)
+			return nil
+		},
+		OnStop: func(context.Context) error {
+			log.Info().Msg("restart worker start")
+			return nil
+		},
+	})
 	return r
 }
 
