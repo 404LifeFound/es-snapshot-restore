@@ -217,6 +217,7 @@ func NewRestoreReconcilerCtrl(mgr *ctrl.Manager) *RestoreReconciler {
 	log.Info().Msg("restore worker start")
 	r.StartWorker(context.Background())
 	r.SetupWithManager(*mgr)
+	return r
 }
 
 func RunManager(lc fx.Lifecycle, mgr *ctrl.Manager) {
