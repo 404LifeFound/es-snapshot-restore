@@ -310,3 +310,34 @@ func (es *ES) GetAllSnapshotDetails(ctx context.Context) ([]Snapshot, error) {
 
 	return all_snapshots, nil
 }
+
+type Recovery struct {
+	Index            string `json:"index"`
+	Shard            string `json:"shard"`
+	Stage            string `json:"stage"`
+	TargetNode       string `json:"target_node"`
+	RecoveredPercent string `json:"bytes_percent"`
+}
+
+func (es *ES) CatIndexRecoveryRequest(index []string) esapi.CatRecoveryRequest {
+	return esapi.CatRecoveryRequest{
+		Index:  index,
+		Format: "json",
+		H:      []string{"index,shard", "stage", "target_node", "bytes_percent"},
+	}
+}
+
+func (es *ES) GetRestoreIndexProcess(index []string) ([]Recovery, error) {
+	recovery_result := []Recovery{}
+	res, err := es.CatIndexRecoveryRequest(index).Do(context.Background(), es.Client)
+	if err != nil {
+		return recovery_result, err
+	}
+	defer res.Body.Close()
+
+	if err := json.NewDecoder(res.Body).Decode(&recovery_result); err != nil {
+		return recovery_result, err
+	}
+
+	return recovery_result, nil
+}

@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/404LifeFound/es-snapshot-restore/internal/cache"
-	"github.com/404LifeFound/es-snapshot-restore/internal/controller"
+	"github.com/404LifeFound/es-snapshot-restore/internal/controller/controller"
 	"github.com/404LifeFound/es-snapshot-restore/internal/cron"
 	"github.com/404LifeFound/es-snapshot-restore/internal/db"
 	"github.com/404LifeFound/es-snapshot-restore/internal/elastic"
@@ -83,7 +83,11 @@ func NewServerCmd() *cobra.Command {
 	flags.String("es-containername", "elasticsearch", "elasticsearch container name")
 	flags.String("es-topologykey", "kubernetes.io/hostname", "elasticsearch topology key")
 	flags.Float64("es-diskminsize", 10.0, "restore node min disk size")
-	flags.Int("es-randomlen", 10.0, "restore node ramdom name part lenght")
+	flags.Int("es-randomlen", 10, "restore node ramdom name part lenght")
+	flags.Int("es-concurrency", 2, "max concurrency to restore index from snapshot")
+	flags.Int("es-maxtasks", 100, "max tasks to restore index from snapshot")
+	flags.Int("es-timeout", 10, "max timeout for restore,unit is minute")
+	flags.Int("es-interval", 10, "check restore process interval,unit is secend")
 	flags.StringToString("es-labels", map[string]string{}, "es labels")
 	flags.StringToString("es-annotations", map[string]string{}, "es annotations")
 	flags.StringToString("es-tolerations", map[string]string{}, "es tolerations")

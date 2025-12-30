@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/404LifeFound/es-snapshot-restore/config"
+	restorev1 "github.com/404LifeFound/es-snapshot-restore/internal/controller/api/v1"
 	"github.com/404LifeFound/es-snapshot-restore/internal/utils"
 	commonv1 "github.com/elastic/cloud-on-k8s/v3/pkg/apis/common/v1"
 	esv1 "github.com/elastic/cloud-on-k8s/v3/pkg/apis/elasticsearch/v1"
@@ -31,6 +32,7 @@ func NewClient() (*Client, error) {
 
 	scheme := runtime.NewScheme()
 	esv1.AddToScheme(scheme)
+	restorev1.AddToScheme(scheme)
 
 	c, err := runtimeclient.New(
 		config,

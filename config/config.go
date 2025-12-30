@@ -66,6 +66,10 @@ type ES struct {
 	TopologyKey    string            `koanf:"topologykey" yaml:"topology_key" json:"topology_key"`
 	DiskMinSize    float64           `koanf:"diskminsize" yaml:"disk_min_size" json:"disk_min_size"`
 	RandomLen      int               `koanf:"randomlen" yaml:"random_len" json:"random_len"`
+	Concurrency    int               `koanf:"concurrency" yaml:"concurrency" json:"concurrency"`
+	MaxTasks       int               `koanf:"maxtasks" yaml:"max_tasks" json:"max_tasks"`
+	Timeout        int               `koanf:"timeout" yaml:"timeout" json:"timeout"`
+	Interval       int               `koanf:"interval" yaml:"interval" json:"interval"`
 }
 
 type Kibana struct {

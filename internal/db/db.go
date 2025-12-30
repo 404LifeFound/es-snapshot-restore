@@ -33,23 +33,14 @@ type ESSnapshot struct {
 
 type Task struct {
 	gorm.Model
-	TaskID       string  `gorm:"size:64;uniqueIndex;not null"`
+	TaskID       string `gorm:"size:64;index;not null"`
+	Index        string `gorm:"index;not null"`
+	Repository   string
+	Snapshot     string
 	Status       string  `gorm:"size:20;index;not null"` // PENDING, RUNNING, SUCCESS, FAILED, TIMEOUT, CANCELED
-	CurrentStage string  `gorm:"size:32"`
+	CurrentStage *string `gorm:"size:32"`
 	Payload      *string `gorm:"type:json"`
 	ErrorMessage *string `gorm:"type:text"`
-
-	StartedAt  *time.Time
-	FinishedAt *time.Time
-}
-
-type TaskStage struct {
-	gorm.Model
-	TaskID     string `gorm:"size:64;index;not null"`
-	Stage      string `gorm:"size:32;not null"` // INIT,CREATE_ES_NODE,CHECK_ES_NODE,RESTORE_INDEX
-	Status     string `gorm:"size:20;not null"` // PENDING, RUNNING, SUCCESS, FAILED, SKIPPED
-	RetryCount int    `gorm:"default:0"`
-	ErrorMsg   string `gorm:"type:text"`
 
 	StartedAt  *time.Time
 	FinishedAt *time.Time
@@ -84,7 +75,7 @@ func NewDB(lc fx.Lifecycle) (*gorm.DB, error) {
 	lc.Append(fx.Hook{
 		OnStart: func(context.Context) error {
 			log.Info().Msg("db start")
-			if err := db.AutoMigrate(&ESIndex{}, &ESSnapshot{}, &Task{}, &TaskStage{}); err != nil {
+			if err := db.AutoMigrate(&ESIndex{}, &ESSnapshot{}, &Task{}); err != nil {
 				log.Error().Err(err).Msg("failed to migrate db")
 				return err
 			}

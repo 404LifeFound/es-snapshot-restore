@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- restore_v1_restoretask.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

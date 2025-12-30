@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/404LifeFound/es-snapshot-restore/config"
+	restorev1 "github.com/404LifeFound/es-snapshot-restore/internal/controller/api/v1"
 	"github.com/404LifeFound/es-snapshot-restore/internal/db"
 	"github.com/404LifeFound/es-snapshot-restore/internal/elastic"
 	"github.com/404LifeFound/es-snapshot-restore/internal/k8s"
@@ -13,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -219,10 +221,9 @@ func (h *Handler) CreateRestoreNode(c *gin.Context) {
 
 func (h *Handler) NewTask(c *gin.Context) {
 	task := db.Task{
-		TaskID:       utils.TaskID(),
-		Status:       string(utils.TaskPending),
-		CurrentStage: string(utils.StagInit),
-		StartedAt:    utils.PtrToAny(time.Now()),
+		TaskID:    utils.TaskID(),
+		Status:    string(utils.TaskPending),
+		StartedAt: utils.PtrToAny(time.Now()),
 	}
 
 	if err := db.CreateRecords(h.DBClient, &[]db.Task{task}); err != nil {
@@ -309,6 +310,106 @@ func (h *Handler) DebugHandler(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "success",
+	})
+}
+
+type RestoreViaCR struct {
+	TaskID     string `json:"task_id"`
+	Index      string `json:"index"`
+	Repository string `json:"repository"`
+	Snapshot   string `json:"snapshot"`
+	StoreSize  string `json:"store_size"`
+}
+
+type RestoreViaCRRequest struct {
+	Tasks []RestoreViaCR
+}
+
+func (h *Handler) RestoreViaCR(c *gin.Context) {
+	var r RestoreViaCRRequest
+	if c.ContentType() != "application/json" {
+		err := fmt.Errorf("content type should be application/json")
+		c.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"message": fmt.Sprintf("invalid content type %s, please use application/json", c.ContentType()),
+		})
+		return
+	}
+
+	if err := c.ShouldBindJSON(&r); err != nil {
+		c.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"message": fmt.Sprintf("invalid post data: %s,can't bind post data to RestoreViaCRRequest", err.Error()),
+		})
+		return
+	}
+
+	var success_taskes []string
+	var failed_taskes []string
+	node_name := fmt.Sprintf("%s-%s", config.GlobalConfig.ES.RestoreKey, utils.RandomName())
+
+	for _, t := range r.Tasks {
+		task := db.Task{
+			TaskID:     t.TaskID,
+			Index:      t.Index,
+			Repository: t.Repository,
+			Snapshot:   t.Snapshot,
+		}
+
+		if err := db.CreateRecords(h.DBClient, &[]db.Task{task}); err != nil {
+			c.Error(err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"message": fmt.Sprintf("faild to create task %s", err.Error()),
+			})
+			return
+		}
+
+		// create RestoreTask resource
+		restore_task_name := fmt.Sprintf("%s-%s", node_name, utils.RandomString(8))
+		restore_task := restorev1.RestoreTask{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "RestoreTask",
+				APIVersion: restorev1.GroupVersion.Group,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      restore_task_name,
+				Namespace: config.GlobalConfig.ES.Namespace,
+			},
+			Spec: restorev1.RestoreTaskSpec{
+				TaskId:  t.TaskID,
+				Indices: []string{t.Index},
+				Snapshot: restorev1.SnapshotRef{
+					Repository: t.Repository,
+					Snapshot:   t.Snapshot,
+				},
+				ElasticsearchRef: restorev1.ElasticsearchRef{
+					Namespace: config.GlobalConfig.ES.Namespace,
+					Name:      config.GlobalConfig.ES.Name,
+				},
+				NodeName:  node_name,
+				StoreSize: t.StoreSize,
+			},
+		}
+
+		if err := h.K8Sclient.Create(c.Request.Context(), &restore_task); err != nil {
+			c.Error(err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"message": fmt.Sprintf("failed to create RestoreTask %s: %s", restore_task_name, err.Error()),
+			})
+			failed_taskes = append(failed_taskes, restore_task_name)
+		}
+		success_taskes = append(success_taskes, restore_task_name)
+	}
+
+	if len(failed_taskes) > 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success_taskes": success_taskes,
+			"failed_taskes":  failed_taskes,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success_taskes": success_taskes,
 	})
 }
 
