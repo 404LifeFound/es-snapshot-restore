@@ -361,7 +361,8 @@ func (h *Handler) RestoreViaCR(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 				"message": fmt.Sprintf("faild to create task %s", err.Error()),
 			})
-			return
+			failed_taskes = append(failed_taskes, t.TaskID)
+			continue
 		}
 
 		// create RestoreTask resource
@@ -396,9 +397,9 @@ func (h *Handler) RestoreViaCR(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 				"message": fmt.Sprintf("failed to create RestoreTask %s: %s", restore_task_name, err.Error()),
 			})
-			failed_taskes = append(failed_taskes, restore_task_name)
+			failed_taskes = append(failed_taskes, t.TaskID)
 		}
-		success_taskes = append(success_taskes, restore_task_name)
+		success_taskes = append(success_taskes, t.TaskID)
 	}
 
 	if len(failed_taskes) > 0 {

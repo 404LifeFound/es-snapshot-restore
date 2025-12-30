@@ -76,9 +76,9 @@ func (r *RestoreTaskReconciler) StartWorker(ctx context.Context) {
 					defer func() { <-r.sem }()
 					err := r.restoreIndices(task)
 					if err != nil {
-						r.updateTaskStatus(ctx, task, "failed")
+						r.updateTaskStatus(ctx, task, RestoreStatusFailed)
 					} else {
-						r.updateTaskStatus(ctx, task, "done")
+						r.updateTaskStatus(ctx, task, RestoreStatusDone)
 					}
 				}(task)
 			}
@@ -94,8 +94,7 @@ func (r *RestoreTaskReconciler) updateTaskStatus(ctx context.Context, task *Rest
 	}
 
 	restore_task.Status.FinishedAt = utils.PtrToAny(metav1.Now())
-	restore_task.Status.Process = restorev1.ProcessFalse
-	log.Info().Msgf("success to get RestoreTask: %s", task.Name)
+	restore_task.Status.Status = status
 	if err := r.Client.Update(ctx, &restore_task); err != nil {
 		log.Error().Err(err).Msgf("failed to update RestoreTask %s", restore_task.Name)
 		// TODO retry
@@ -180,7 +179,6 @@ func (r *RestoreTaskReconciler) restoreIndices(task *RestoreTask) error {
 			return fmt.Errorf("restore of index %s timed out after %s", task_one.Index, restoreTimeout)
 		}
 	}
-	// TODO update db
 }
 
 // +kubebuilder:rbac:groups=restore.restore.elastic.co,resources=restoretasks,verbs=get;list;watch;create;update;patch;delete
@@ -201,6 +199,12 @@ func (r *RestoreTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err := r.Get(ctx, req.NamespacedName, &restore_task); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	if restore_task.Status.StartAt == nil {
+		restore_task.Status.StartAt = utils.PtrToAny(metav1.Now())
+		if err := r.Update(ctx, &restore_task); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 
 	var es esv1.Elasticsearch
 
@@ -212,25 +216,7 @@ func (r *RestoreTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	if err := r.Get(ctx, client.ObjectKey{Namespace: es_ns, Name: es_name}, &es); err != nil {
 		log.Error().Err(err).Msgf("Elasticsearch of %s in %s Namespace not found: %v", es_name, es_ns, err)
-		// update RestoreTask status
-		restore_task.Status.Phase = restorev1.PhaseGetES
-		restore_task.Status.Process = restorev1.ProcessTrue
-		restore_task.Status.Reason = fmt.Sprintf("Elasticsearch of %s in %s Namespace not found: %v", es_name, es_ns, err)
-		if err := r.Client.Update(ctx, &restore_task); err != nil {
-			log.Error().Err(err).Msgf("failed to update RestoreTask %s", restore_task.Name)
-			// requeue
-			return ctrl.Result{}, err
-		}
 		// requeue
-		return ctrl.Result{}, err
-	}
-
-	// update RestoreTask status
-	restore_task.Status.Phase = restorev1.PhaseGetES
-	restore_task.Status.Process = restorev1.ProcessTrue
-	restore_task.Status.Reason = ""
-	if err := r.Client.Update(ctx, &restore_task); err != nil {
-		log.Error().Err(err).Msgf("failed to update RestoreTask %s", restore_task.Name)
 		return ctrl.Result{}, err
 	}
 
@@ -253,14 +239,6 @@ func (r *RestoreTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		es.Spec.NodeSets = append(es.Spec.NodeSets, *restore_node.NodeSet)
 		if err := r.Patch(ctx, &es, client.MergeFrom(original_es)); err != nil {
 			log.Error().Err(err).Msgf("failed to patch Elasticsearch of %s in %s Namespace to add new node: %s", es_name, es_ns, restore_task.Spec.NodeName)
-
-			restore_task.Status.Phase = restorev1.PhaseCreateESNodeSet
-			restore_task.Status.Reason = fmt.Sprintf("failed to patch Elasticsearch of %s in %s Namespace to add new node: %s", es_name, es_ns, restore_task.Spec.NodeName)
-			if err := r.Client.Update(ctx, &restore_task); err != nil {
-				log.Error().Err(err).Msgf("failed to update RestoreTask %s", restore_task.Name)
-				return ctrl.Result{}, err
-			}
-
 			return ctrl.Result{}, err
 		}
 	} else {
@@ -280,14 +258,6 @@ func (r *RestoreTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			}
 			if err := r.Patch(ctx, &es, client.MergeFrom(original_es)); err != nil {
 				log.Error().Err(err).Msgf("failed to patch Elasticsearch of %s in %s Namespace to add new node: %s", es_name, es_ns, restore_task.Spec.NodeName)
-
-				restore_task.Status.Phase = restorev1.PhaseIncreaseNodeSetStorage
-				restore_task.Status.Reason = fmt.Sprintf("failed to patch Elasticsearch of %s in %s Namespace to increase node set storage: %s", es_name, es_ns, restore_task.Spec.NodeName)
-				if err := r.Client.Update(ctx, &restore_task); err != nil {
-					log.Error().Err(err).Msgf("failed to update RestoreTask %s", restore_task.Name)
-					return ctrl.Result{}, err
-				}
-
 				return ctrl.Result{}, err
 			}
 		}
@@ -297,12 +267,6 @@ func (r *RestoreTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	var sts appsv1.StatefulSet
 	sts_name := fmt.Sprintf("%s-es-%s", es_name, restore_task.Spec.NodeName)
 	if err := r.Get(ctx, client.ObjectKey{Namespace: es_ns, Name: sts_name}, &sts); err != nil {
-		restore_task.Status.Phase = restorev1.PhaseCheckStatefulsetStatus
-		restore_task.Status.Reason = fmt.Sprintf("failed to get statefulset %s in %s namespace", sts_name, es_ns)
-		if err := r.Client.Update(ctx, &restore_task); err != nil {
-			log.Error().Err(err).Msgf("failed to update RestoreTask %s", restore_task.Name)
-			return ctrl.Result{}, err
-		}
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, err
 	}
 
@@ -315,25 +279,8 @@ func (r *RestoreTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	if sts.Status.ReadyReplicas != *sts.Spec.Replicas {
-		log.Info().
-			Str("sts", sts.Name).
-			Msg("StatefulSet not ready yet")
-
-		restore_task.Status.Phase = restorev1.PhaseCheckStatefulsetStatus
-		restore_task.Status.Reason = fmt.Sprintf("statefulset %s in %s namespace not ready", sts_name, es_ns)
-		if err := r.Client.Update(ctx, &restore_task); err != nil {
-			log.Error().Err(err).Msgf("failed to update RestoreTask %s", restore_task.Name)
-			return ctrl.Result{}, err
-		}
-
+		log.Info().Str("sts", sts.Name).Msg("StatefulSet not ready yet")
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-	}
-
-	restore_task.Status.Phase = restorev1.PhaseProcessingRestoring
-	restore_task.Status.Reason = ""
-	if err := r.Client.Update(ctx, &restore_task); err != nil {
-		log.Error().Err(err).Msgf("failed to update RestoreTask %s", restore_task.Name)
-		return ctrl.Result{}, err
 	}
 
 	r.taskQueue <- &RestoreTask{
@@ -376,12 +323,13 @@ func (r *RestoreTaskReconciler) match(restore_task *restorev1.RestoreTask) bool 
 func (r *RestoreTaskReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&restorev1.RestoreTask{}).
-		WithEventFilter(predicate.Funcs{
-			CreateFunc:  r.filterCreate,
-			UpdateFunc:  r.filterUpdate,
-			DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-			GenericFunc: func(e event.GenericEvent) bool { return false },
-		}).
+		//WithEventFilter(predicate.Funcs{
+		//CreateFunc:  r.filterCreate,
+		//UpdateFunc:  r.filterUpdate,
+		//DeleteFunc:  func(e event.DeleteEvent) bool { return false },
+		//GenericFunc: func(e event.GenericEvent) bool { return false },
+		//}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Named("restoretask").
 		Complete(r)
 }

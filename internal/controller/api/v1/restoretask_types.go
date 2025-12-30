@@ -65,11 +65,10 @@ type ElasticsearchRef struct {
 
 // RestoreTaskStatus defines the observed state of RestoreTask.
 type RestoreTaskStatus struct {
-	Phase      Phase              `json:"phase"`
-	Process    Process            `json:"process"`
 	Reason     string             `json:"reason"`
 	StartAt    *metav1.Time       `json:"start_at"`
 	FinishedAt *metav1.Time       `json:"finished_at"`
+	Status     string             `json:"status"`
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 

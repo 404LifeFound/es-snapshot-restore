@@ -139,24 +139,18 @@ spec:
               finished_at:
                 format: date-time
                 type: string
-              phase:
-                type: string
-              process:
-                description: |-
-                  EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-                  NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-                type: integer
               reason:
                 type: string
               start_at:
                 format: date-time
                 type: string
+              status:
+                type: string
             required:
             - finished_at
-            - phase
-            - process
             - reason
             - start_at
+            - status
             type: object
         required:
         - spec
