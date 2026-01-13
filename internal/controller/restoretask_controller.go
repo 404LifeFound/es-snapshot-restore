@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/404LifeFound/es-snapshot-restore/config"
@@ -411,6 +412,9 @@ func NewManager() (*ctrl.Manager, error) {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		Cache:  cache.Options{},
+		Metrics: server.Options{
+			BindAddress: ":8081",
+		},
 	})
 	if err != nil {
 		return nil, err

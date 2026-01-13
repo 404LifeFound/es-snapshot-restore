@@ -2,7 +2,10 @@ package http
 
 import (
 	"fmt"
+	"io"
+	"io/fs"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/404LifeFound/es-snapshot-restore/config"
@@ -11,6 +14,7 @@ import (
 	"github.com/404LifeFound/es-snapshot-restore/internal/elastic"
 	"github.com/404LifeFound/es-snapshot-restore/internal/k8s"
 	"github.com/404LifeFound/es-snapshot-restore/internal/utils"
+	"github.com/404LifeFound/es-snapshot-restore/ui"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
@@ -416,6 +420,18 @@ func (h *Handler) RestoreViaCR(c *gin.Context) {
 	})
 }
 
+func (h *Handler) GetTasks(c *gin.Context) {
+	tasks, err := db.QueryAll[db.Task](h.DBClient, "created_at DESC", 100)
+	if err != nil {
+		c.Error(err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"message": fmt.Sprintf("failed to get tasks: %s", err.Error()),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, tasks)
+}
+
 func RegisterHandler(e *gin.Engine, es_client *elastic.ES, db_client *gorm.DB, k8s_client *k8s.Client) error {
 	handler := &Handler{
 		ESClient:  es_client,
@@ -428,5 +444,56 @@ func RegisterHandler(e *gin.Engine, es_client *elastic.ES, db_client *gorm.DB, k
 	e.GET("/indices", handler.QueryIndex)
 	e.DELETE("/node", handler.DeleteRestoreNode)
 	e.POST("/restoreTask", restore_snaphost_handler.RestoreViaCR)
+	e.POST("/preview", restore_snaphost_handler.RestoreSnapshot)
+	e.GET("/tasks", handler.GetTasks)
+
+	distFS, err := fs.Sub(ui.Dist, "dist")
+	if err != nil {
+		return err
+	}
+
+	assetsFS, err := fs.Sub(distFS, "assets")
+	if err != nil {
+		return err
+	}
+
+	e.StaticFS("/assets", http.FS(assetsFS))
+
+	e.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+		if path == "/" || path == "/index.html" {
+			c.Header("Content-Type", "text/html")
+			file, err := distFS.Open("index.html")
+			if err != nil {
+				c.String(http.StatusInternalServerError, "index.html not found")
+				return
+			}
+			defer file.Close()
+			stat, _ := file.Stat()
+			http.ServeContent(c.Writer, c.Request, "index.html", stat.ModTime(), file.(io.ReadSeeker))
+			return
+		}
+
+		cleanPath := strings.TrimPrefix(path, "/")
+		if f, err := distFS.Open(cleanPath); err == nil {
+			defer f.Close()
+			if stat, err := f.Stat(); err == nil && !stat.IsDir() {
+				c.FileFromFS(cleanPath, http.FS(distFS))
+				return
+			}
+		}
+
+		// Fallback to index.html for SPA
+		c.Header("Content-Type", "text/html")
+		file, err := distFS.Open("index.html")
+		if err != nil {
+			c.String(http.StatusInternalServerError, "index.html not found")
+			return
+		}
+		defer file.Close()
+		stat, _ := file.Stat()
+		http.ServeContent(c.Writer, c.Request, "index.html", stat.ModTime(), file.(io.ReadSeeker))
+	})
+
 	return nil
 }
