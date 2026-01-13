@@ -408,7 +408,6 @@ func NewRestoreReconcilerCtrl(lc fx.Lifecycle, mgr *ctrl.Manager, es_client *ela
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			log.Info().Msg("restart worker start")
-			r.StartWorker(ctx)
 			return nil
 		},
 		OnStop: func(context.Context) error {
