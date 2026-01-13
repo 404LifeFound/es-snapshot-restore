@@ -120,9 +120,12 @@ func CreateIndexRecords[T any](db *gorm.DB, records *[]T) error {
 // Create records in batch, if onconflict on name(uniq snapshot) column, then update the snapshot and updated_at column
 func CreateSnapshotRecords[T any](db *gorm.DB, records *[]T) error {
 	err := db.Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "name"}},
+		Columns: []clause.Column{{Name: "snapshot"}},
 		DoUpdates: clause.Assignments(map[string]any{
-			"Snapshot":   gorm.Expr("VALUES(snapshot)"),
+			"repository": gorm.Expr("VALUES(repository)"),
+			"state":      gorm.Expr("VALUES(state)"),
+			"start_time": gorm.Expr("VALUES(start_time)"),
+			"indices":    gorm.Expr("VALUES(indices)"),
 			"updated_at": gorm.Expr("VALUES(updated_at)"),
 		}),
 	}).Create(records).Error

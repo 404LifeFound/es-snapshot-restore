@@ -63,11 +63,13 @@ func (a *AllSnapshot) Run() {
 		snapshot_create_time, err := db.NewTimeString(s.StartTime)
 		if err != nil {
 			log.Error().Err(err).Msg("faild to parse time string to TimeString")
+			continue
 		}
 
 		indices, err := json.Marshal(s.Indices)
 		if err != nil {
 			log.Error().Err(err).Msg("faild to parse marshal snapshot indices")
+			continue
 		}
 		all_snapshots = append(all_snapshots, db.ESSnapshot{
 			Snapshot:   s.Snapshot,

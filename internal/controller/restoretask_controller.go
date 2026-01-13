@@ -122,6 +122,13 @@ func (r *RestoreTaskReconciler) restoreIndices(task *RestoreTask) error {
 
 	task_one := t[0]
 
+	var current_rt restorev1.RestoreTask
+	if err := r.Get(context.Background(), client.ObjectKey{Namespace: task.Namespace, Name: task.Name}, &current_rt); err != nil {
+		log.Error().Err(err).Msgf("failed to get RestoreTask %s/%s for restoring indices", task.Namespace, task.Name)
+		return err
+	}
+	targetNode := current_rt.Spec.NodeName
+
 	log.Info().Msgf("restoring index %s from snapshot %s", task_one.Index, task_one.Snapshot)
 	if err := r.ESClient.Restore(
 		context.Background(),
@@ -129,7 +136,7 @@ func (r *RestoreTaskReconciler) restoreIndices(task *RestoreTask) error {
 		task_one.Snapshot,
 		config.GlobalConfig.ES.RestoreKey,
 		config.GlobalConfig.ES.RestoreKey,
-		task_one.Repository,
+		targetNode,
 		[]string{task_one.Index},
 	); err != nil {
 		log.Error().Err(err).Msgf("failed to restore index %s from snapshot %s", task_one.Index, task_one.Snapshot)

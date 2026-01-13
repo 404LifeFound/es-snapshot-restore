@@ -65,7 +65,10 @@ func NewESNodeSet(name, size string) *ESNodeSet {
 		})
 	}
 
-	labels := config.GlobalConfig.ES.Labels
+	labels := make(map[string]string, len(config.GlobalConfig.ES.Labels))
+	for k, v := range config.GlobalConfig.ES.Labels {
+		labels[k] = v
+	}
 	labels["app.kubernetes.io/instance"] = fmt.Sprintf("%s", name)
 
 	return &ESNodeSet{

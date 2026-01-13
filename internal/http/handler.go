@@ -322,7 +322,7 @@ type RestoreViaCR struct {
 }
 
 type RestoreViaCRRequest struct {
-	Tasks []RestoreViaCR
+	Tasks []RestoreViaCR `json:"tasks"`
 }
 
 func (h *Handler) RestoreViaCR(c *gin.Context) {

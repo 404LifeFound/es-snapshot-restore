@@ -323,7 +323,7 @@ func (es *ES) CatIndexRecoveryRequest(index []string) esapi.CatRecoveryRequest {
 	return esapi.CatRecoveryRequest{
 		Index:  index,
 		Format: "json",
-		H:      []string{"index,shard", "stage", "target_node", "bytes_percent"},
+		H:      []string{"index", "shard", "stage", "target_node", "bytes_percent"},
 	}
 }
 

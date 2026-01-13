@@ -33,10 +33,8 @@ func (h *Handler) QueryIndexResultViaTime(name []string, startAt, endAt string) 
 		param = append(param, fmt.Sprintf("%%%s%%", n))
 	}
 
-	//nameQuery := "(" + strings.Join(name_conds, " OR ") + ")"
-	nameQuery := strings.Join(name_conds, " OR ")
+	nameQuery := "(" + strings.Join(name_conds, " OR ") + ")"
 	log.Info().Msgf("nameQuery is: %s", nameQuery)
-	//nameQuery := fmt.Sprintf("%s%s%s", "(", strings.Join(name_conds, " OR "), ")")
 
 	if startAt != "" && endAt == "" {
 		before_start_time_first_query := fmt.Sprintf("%s AND index_create_at <= ?", nameQuery)
