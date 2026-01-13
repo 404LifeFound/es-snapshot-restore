@@ -62,9 +62,7 @@ func NewTimeString(s string) (TimeString, error) {
 	}
 
 	for _, layout := range layouts {
-		if t, err := time.ParseInLocation(layout, s, time.Local); err != nil {
-			return TimeString{}, err
-		} else {
+		if t, err := time.ParseInLocation(layout, s, time.Local); err == nil {
 			return TimeString{Time: t}, nil
 		}
 	}

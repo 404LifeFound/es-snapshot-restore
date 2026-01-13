@@ -95,6 +95,13 @@ func (r *RestoreTaskReconciler) updateTaskStatus(ctx context.Context, task *Rest
 
 	restore_task.Status.FinishedAt = utils.PtrToAny(metav1.Now())
 	restore_task.Status.Status = status
+	reason := status
+	if status == RestoreStatusDone {
+		reason = "RestoreCompleted"
+	} else if status == RestoreStatusFailed {
+		reason = "RestoreFailed"
+	}
+	restore_task.Status.Reason = reason
 	if err := r.Client.Status().Update(ctx, &restore_task); err != nil {
 		log.Error().Err(err).Msgf("failed to update RestoreTask %s", restore_task.Name)
 		// TODO retry
@@ -201,6 +208,9 @@ func (r *RestoreTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 	if restore_task.Status.StartAt == nil {
 		restore_task.Status.StartAt = utils.PtrToAny(metav1.Now())
+		restore_task.Status.Status = RestoreStatusRunning
+		restore_task.Status.Reason = "RestoreStarted"
+		restore_task.Status.FinishedAt = restore_task.Status.StartAt
 		if err := r.Status().Update(ctx, &restore_task); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -293,8 +303,8 @@ func (r *RestoreTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// ensure the sts owned by Elasticsearch
 	for _, owner := range sts.OwnerReferences {
-		if owner.Kind == "Elasticsearch" &&
-			owner.APIVersion == "elasticsearch.k8s.elastic.co/v1" {
+		if owner.Kind != "Elasticsearch" ||
+			owner.APIVersion != "elasticsearch.k8s.elastic.co/v1" {
 			return ctrl.Result{}, fmt.Errorf("statefulset %s not owned by Elasticsearch %s", sts_name, es.Name)
 		}
 	}

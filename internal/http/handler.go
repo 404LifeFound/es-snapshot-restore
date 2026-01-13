@@ -403,7 +403,7 @@ func (h *Handler) RestoreViaCR(c *gin.Context) {
 	}
 
 	if len(failed_taskes) > 0 {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"success_taskes": success_taskes,
 			"failed_taskes":  failed_taskes,
 		})
