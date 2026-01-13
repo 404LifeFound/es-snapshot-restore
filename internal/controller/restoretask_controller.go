@@ -135,7 +135,7 @@ func (r *RestoreTaskReconciler) restoreIndices(task *RestoreTask) error {
 		task_one.Repository,
 		task_one.Snapshot,
 		config.GlobalConfig.ES.RestoreKey,
-		task_one.RestoreNode,
+		config.GlobalConfig.ES.RestoreKey,
 		targetNode,
 		[]string{task_one.Index},
 	); err != nil {
@@ -151,20 +151,7 @@ func (r *RestoreTaskReconciler) restoreIndices(task *RestoreTask) error {
 
 	restoreTimeout := time.Duration(config.GlobalConfig.ES.Timeout) * time.Minute
 	pollInterval := time.Duration(config.GlobalConfig.ES.Interval) * time.Second
-	all, err := r.ESClient.GetAllIndex(context.Background())
-	if err == nil {
-		expected := fmt.Sprintf("%s_%s_%s", config.GlobalConfig.ES.RestoreKey, targetNode, task_one.Index)
-		for _, i := range all {
-			if i.Name == expected {
-				if err := r.DBClient.Model(&task_one).Updates(map[string]any{
-					"Status": string(utils.TaskSuccess),
-				}).Error; err != nil {
-					log.Error().Err(err).Msgf("failed to update status for task id %s of index %s when task success", task_one.TaskID, task_one.Index)
-				}
-				return nil
-			}
-		}
-	}
+	expected := fmt.Sprintf("%s_%s_%s", config.GlobalConfig.ES.RestoreKey, targetNode, task_one.Index)
 
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
@@ -174,21 +161,35 @@ func (r *RestoreTaskReconciler) restoreIndices(task *RestoreTask) error {
 	for {
 		select {
 		case <-ticker.C:
-			res, err := r.ESClient.GetRestoreIndexProcess([]string{task_one.Index})
+			res, err := r.ESClient.GetRestoreIndexProcess([]string{expected})
 			if err != nil {
 				log.Error().Err(err).Msgf("failed to check the recovery process of restore index %s from snapshot %s", task_one.Index, task_one.Snapshot)
 				continue
 			}
 
 			if len(res) == 0 {
-				log.Warn().Msgf("no recovery info found for index %s, retrying...", task_one.Index)
+				all, err := r.ESClient.GetAllIndex(context.Background())
+				if err == nil {
+					for _, i := range all {
+						if i.Name == expected {
+							if err := r.DBClient.Model(&task_one).Updates(map[string]any{
+								"Status": string(utils.TaskSuccess),
+							}).Error; err != nil {
+								log.Error().Err(err).Msgf("failed to update status for task id %s of index %s when task success", task_one.TaskID, task_one.Index)
+								continue
+							}
+							return nil
+						}
+					}
+				}
+				log.Warn().Msgf("no recovery info found for index %s, retrying...", expected)
 				continue
 			}
 
-			log.Info().Msgf("restore progress of index %s: %s", task_one.Index, res[0].RecoveredPercent)
+			log.Info().Msgf("restore progress of index %s: %s", expected, res[0].RecoveredPercent)
 
 			if res[0].RecoveredPercent == "100%" {
-				log.Info().Msgf("restore of index %s completed successfully", task_one.Index)
+				log.Info().Msgf("restore of index %s completed successfully", expected)
 				if err := r.DBClient.Model(&task_one).Updates(map[string]any{
 					"Status": string(utils.TaskSuccess),
 				}).Error; err != nil {
