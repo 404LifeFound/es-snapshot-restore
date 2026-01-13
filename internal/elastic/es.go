@@ -259,6 +259,24 @@ func (es *ES) GetSnapshotDetail(ctx context.Context, repo string, snapshot []str
 }
 
 func (es *ES) Restore(ctx context.Context, repo, snapshot, prefix, restore_attr_key, restore_attr_value string, restore_index []string) error {
+	all, err := es.GetAllIndex(ctx)
+	if err == nil {
+		exist := map[string]struct{}{}
+		for _, i := range all {
+			exist[i.Name] = struct{}{}
+		}
+		var missing []string
+		for _, i := range restore_index {
+			target := fmt.Sprintf("%s_%s_%s", prefix, restore_attr_value, i)
+			if _, ok := exist[target]; !ok {
+				missing = append(missing, i)
+			}
+		}
+		if len(missing) == 0 {
+			return nil
+		}
+		restore_index = missing
+	}
 	resp, err := es.RestoreSnapshotRequest(
 		repo,
 		snapshot,
