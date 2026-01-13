@@ -37,6 +37,7 @@ type Task struct {
 	Index        string `gorm:"index;not null"`
 	Repository   string
 	Snapshot     string
+	RestoreNode  string
 	Status       string  `gorm:"size:20;index;not null"` // PENDING, RUNNING, SUCCESS, FAILED, TIMEOUT, CANCELED
 	CurrentStage *string `gorm:"size:32"`
 	Payload      *string `gorm:"type:json"`

@@ -346,14 +346,15 @@ func (h *Handler) RestoreViaCR(c *gin.Context) {
 
 	var success_taskes []string
 	var failed_taskes []string
-	node_name := fmt.Sprintf("%s-%s", config.GlobalConfig.ES.RestoreKey, utils.RandomName())
 
+	node_name := fmt.Sprintf("%s-%s", config.GlobalConfig.ES.RestoreKey, utils.RandomName())
 	for _, t := range r.Tasks {
 		task := db.Task{
-			TaskID:     t.TaskID,
-			Index:      t.Index,
-			Repository: t.Repository,
-			Snapshot:   t.Snapshot,
+			TaskID:      t.TaskID,
+			Index:       t.Index,
+			Repository:  t.Repository,
+			Snapshot:    t.Snapshot,
+			RestoreNode: node_name,
 		}
 
 		if err := db.CreateRecords(h.DBClient, &[]db.Task{task}); err != nil {
