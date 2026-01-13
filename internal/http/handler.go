@@ -424,10 +424,6 @@ func RegisterHandler(e *gin.Engine, es_client *elastic.ES, db_client *gorm.DB, k
 	restore_snaphost_handler := &RestoreSnapshotHandler{Handler: handler}
 
 	e.GET("/indices", handler.QueryIndex)
-	e.POST("/restore", restore_snaphost_handler.RestoreSnapshot)
-	e.PUT("/task", handler.NewTask)
-	e.PUT("/node", handler.CreateRestoreNode)
-	e.DELETE("/node", handler.DeleteRestoreNode)
-	e.GET("/debug", handler.DebugHandler)
+	e.POST("/restoreTask", restore_snaphost_handler.RestoreViaCR)
 	return nil
 }

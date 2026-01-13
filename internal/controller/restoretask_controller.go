@@ -206,6 +206,27 @@ func (r *RestoreTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
+	// update task status to Running
+	t, err := db.QueryAll[db.Task](r.DBClient, "", 0, "task_id = ? and index = ?", restore_task.Spec.TaskId, restore_task.Spec.Indices[0])
+	if err != nil {
+		log.Error().Err(err).Msgf("failed to query task id %s for index %s", restore_task.Spec.TaskId, restore_task.Spec.Indices[0])
+		return ctrl.Result{}, err
+	}
+
+	if len(t) != 1 {
+		log.Error().Err(err).Msgf("records for task_id %s of index %s not equal 1 but %d", restore_task.Spec.TaskId, restore_task.Spec.Indices[0], len(t))
+		return ctrl.Result{}, err
+	}
+
+	if t[0].Status != string(utils.TaskRunning) {
+		if err := r.DBClient.Model(&t).Updates(map[string]any{
+			"Status": string(utils.TaskRunning),
+		}).Error; err != nil {
+			log.Error().Err(err).Msgf("failed to update status for task id %s of index %s", t[0].TaskID, t[0].Index)
+			return ctrl.Result{}, err
+		}
+	}
+
 	var es esv1.Elasticsearch
 
 	es_ns := restore_task.Spec.ElasticsearchRef.Namespace
