@@ -407,6 +407,7 @@ func (h *Handler) RestoreViaCR(c *gin.Context) {
 			"success_taskes": success_taskes,
 			"failed_taskes":  failed_taskes,
 		})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
