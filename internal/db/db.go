@@ -117,7 +117,7 @@ func CreateIndexRecords[T any](db *gorm.DB, records *[]T) error {
 	return err
 }
 
-// Create records in batch, if onconflict on name(uniq index) column, then update the store_size and updated_at column
+// Create records in batch, if onconflict on name(uniq snapshot) column, then update the snapshot and updated_at column
 func CreateSnapshotRecords[T any](db *gorm.DB, records *[]T) error {
 	err := db.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "name"}},

@@ -95,7 +95,7 @@ func (r *RestoreTaskReconciler) updateTaskStatus(ctx context.Context, task *Rest
 
 	restore_task.Status.FinishedAt = utils.PtrToAny(metav1.Now())
 	restore_task.Status.Status = status
-	if err := r.Client.Update(ctx, &restore_task); err != nil {
+	if err := r.Client.Status().Update(ctx, &restore_task); err != nil {
 		log.Error().Err(err).Msgf("failed to update RestoreTask %s", restore_task.Name)
 		// TODO retry
 	}
@@ -201,7 +201,7 @@ func (r *RestoreTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 	if restore_task.Status.StartAt == nil {
 		restore_task.Status.StartAt = utils.PtrToAny(metav1.Now())
-		if err := r.Update(ctx, &restore_task); err != nil {
+		if err := r.Status().Update(ctx, &restore_task); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
