@@ -315,8 +315,10 @@ func (r *RestoreTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	r.taskQueue <- &RestoreTask{
-		TaskID: restore_task.Spec.TaskId,
-		Index:  restore_task.Spec.Indices,
+		TaskID:    restore_task.Spec.TaskId,
+		Index:     restore_task.Spec.Indices,
+		Namespace: restore_task.Namespace,
+		Name:      restore_task.Name,
 	}
 
 	return ctrl.Result{}, nil
