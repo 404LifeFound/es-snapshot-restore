@@ -4,3 +4,5 @@
 tmp/
 config/*.yaml
 ui/.npm-cache
+ui/node_modules
+ui/dist
