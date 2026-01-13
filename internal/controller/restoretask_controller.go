@@ -233,7 +233,7 @@ func (r *RestoreTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	if !node_exist {
-		log.Info().Msgf("node % not exists, so create it", restore_task.Spec.NodeName)
+		log.Info().Msgf("node %s not exists, so create it", restore_task.Spec.NodeName)
 		restore_node := k8s.NewESNodeSet(restore_task.Spec.NodeName, restore_task.Spec.StoreSize)
 		original_es := es.DeepCopy()
 		es.Spec.NodeSets = append(es.Spec.NodeSets, *restore_node.NodeSet)
@@ -253,7 +253,7 @@ func (r *RestoreTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			original_es := es.DeepCopy()
 			es.Spec.NodeSets[exist_node_index].VolumeClaimTemplates[0].Spec.Resources = corev1.VolumeResourceRequirements{
 				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: resource.MustParse(fmt.Sprintf("%sGi", store_size)),
+					corev1.ResourceStorage: resource.MustParse(fmt.Sprintf("%fGi", store_size)),
 				},
 			}
 			if err := r.Patch(ctx, &es, client.MergeFrom(original_es)); err != nil {

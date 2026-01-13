@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/404LifeFound/es-snapshot-restore/internal/cache"
-	"github.com/404LifeFound/es-snapshot-restore/internal/controller/controller"
+	"github.com/404LifeFound/es-snapshot-restore/internal/controller"
 	"github.com/404LifeFound/es-snapshot-restore/internal/cron"
 	"github.com/404LifeFound/es-snapshot-restore/internal/db"
 	"github.com/404LifeFound/es-snapshot-restore/internal/elastic"
