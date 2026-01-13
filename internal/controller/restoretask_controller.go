@@ -126,7 +126,7 @@ func (r *RestoreTaskReconciler) restoreIndices(task *RestoreTask) error {
 		[]string{task_one.Index},
 	); err != nil {
 		log.Error().Err(err).Msgf("failed to restore index %s from snapshot %s", task_one.Index, task_one.Snapshot)
-		if err := r.DBClient.Model(&t).Updates(map[string]any{
+		if err := r.DBClient.Model(&task_one).Updates(map[string]any{
 			"Status":       string(utils.TaskFailed),
 			"ErrorMessage": utils.PtrToAny(fmt.Sprintf("failed to restore index %s from snapshot %s", task_one.Index, task_one.Snapshot)),
 		}).Error; err != nil {
@@ -161,7 +161,7 @@ func (r *RestoreTaskReconciler) restoreIndices(task *RestoreTask) error {
 
 			if res[0].RecoveredPercent == "100%" {
 				log.Info().Msgf("restore of index %s completed successfully", task_one.Index)
-				if err := r.DBClient.Model(&t).Updates(map[string]any{
+				if err := r.DBClient.Model(&task_one).Updates(map[string]any{
 					"Status": string(utils.TaskSuccess),
 				}).Error; err != nil {
 					log.Error().Err(err).Msgf("failed to update status for task id %s of index %s when task success", task_one.TaskID, task_one.Index)
@@ -171,7 +171,7 @@ func (r *RestoreTaskReconciler) restoreIndices(task *RestoreTask) error {
 			}
 
 		case <-timeout:
-			if err := r.DBClient.Model(&t).Updates(map[string]any{
+			if err := r.DBClient.Model(&task_one).Updates(map[string]any{
 				"Status": string(utils.TaskTimeout),
 			}).Error; err != nil {
 				log.Error().Err(err).Msgf("failed to update status for task id %s of index %s when task timeout", task_one.TaskID, task_one.Index)
@@ -219,7 +219,7 @@ func (r *RestoreTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	if t[0].Status != string(utils.TaskRunning) {
-		if err := r.DBClient.Model(&t).Updates(map[string]any{
+		if err := r.DBClient.Model(&t[0]).Updates(map[string]any{
 			"Status": string(utils.TaskRunning),
 		}).Error; err != nil {
 			log.Error().Err(err).Msgf("failed to update status for task id %s of index %s", t[0].TaskID, t[0].Index)
