@@ -370,7 +370,7 @@ func (h *Handler) RestoreViaCR(c *gin.Context) {
 		restore_task := restorev1.RestoreTask{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "RestoreTask",
-				APIVersion: restorev1.GroupVersion.Group,
+				APIVersion: restorev1.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      restore_task_name,

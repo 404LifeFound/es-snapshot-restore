@@ -48,7 +48,7 @@ func NewServerCmd() *cobra.Command {
 	//flag for http server
 	flags.String("http-host", "127.0.0.1", "http host")
 	flags.Int("http-port", 8080, "http port")
-	flags.Bool("http-releasemode", false, "run http server on release mode")
+	flags.Bool("http-releaseMode", false, "run http server on release mode")
 
 	// flags for kibana
 	flags.String("kibana-host", "127.0.0.1", "kibana host")
